@@ -34,18 +34,7 @@ pipeline{
 
                 def NexusRepo = Version.endsWith("SNAPSHOT") ? "DamonsDevOpsLab-SNAPSHOT" : "DamonsDevOpsLab-RELEASE"
 
-                nexusArtifactUploader artifacts: 
-                [[artifactId: "${ArtifactId}", 
-                classifier: '', 
-                file: "target/${ArtifactId}-${Version}.war", 
-                type: 'war']], 
-                credentialsId: '35e9b26e-269a-4804-a70d-6b2ec7a608ce', 
-                groupId: "${GroupId}", 
-                nexusUrl: '172.20.10.140:8081', 
-                nexusVersion: 'nexus3', 
-                protocol: 'http', 
-                repository: "${NexusRepo}", 
-                version: "${Version}"
+                nexusArtifactUploader artifacts: [[artifactId: 'DamonsDevOpsLab', classifier: '', file: 'target/DamonsDevOpsLab-0.0.5-SNAPSHOT.war', type: 'war']], credentialsId: '4c81d5eb-dd74-43b7-8c18-c1582b5a25ac', groupId: 'com.damonsdevopslab', nexusUrl: '172.30.10.245:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'NexusMaven-SNAPSHOT', version: '0.0.5-SNAPSHOT'
              }
             }
         }
