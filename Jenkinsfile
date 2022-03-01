@@ -4,7 +4,12 @@ pipeline{
     tools {
         maven 'maven'
     }
-
+    environment{
+       ArtifactId = readMavenPom().getArtifactId()
+       Version = readMavenPom().getVersion()
+       Name = readMavenPom().getName()
+       GroupId = readMavenPom().getGroupId()
+    }
     stages {
         // Specify various stage with in stages
 
@@ -22,21 +27,87 @@ pipeline{
 
             }
         }
-    
-     }
 
-     //Stage 3 deploy to Nexus
-
-       // Stage3 : Publish the artifacts to Nexus
+        // Stage3 : Publish the artifacts to Nexus
         stage ('Publish to Nexus'){
             steps {
                 script {
 
                 def NexusRepo = Version.endsWith("SNAPSHOT") ? "DamonsDevOpsLab-SNAPSHOT" : "DamonsDevOpsLab-RELEASE"
 
-                nexusArtifactUploader artifacts: [[artifactId: 'DamonsDevOpsLab', classifier: '', file: 'target/DamonsDevOpsLab-0.0.5-SNAPSHOT.war', type: 'war']], credentialsId: '4c81d5eb-dd74-43b7-8c18-c1582b5a25ac', groupId: 'com.damonsdevopslab', nexusUrl: '172.30.10.245:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'NexusMaven-SNAPSHOT', version: '0.0.5-SNAPSHOT'
+                nexusArtifactUploader artifacts: 
+                [[artifactId: "${ArtifactId}", 
+                classifier: '', 
+                file: "target/${ArtifactId}-${Version}.war", 
+                type: 'war']], 
+                credentialsId: '4c81d5eb-dd74-43b7-8c18-c1582b5a25ac', 
+                groupId: "${GroupId}", 
+                nexusUrl: '172.30.10.245:8081', 
+                nexusVersion: 'nexus3', 
+                protocol: 'http', 
+                repository: "${NexusRepo}", 
+                version: "${Version}"
              }
             }
         }
 
-} 
+        // Stage 4 : Print some information
+        stage ('Print Environment variables'){
+                    steps {
+                        echo "Artifact ID is '${ArtifactId}'"
+                        echo "Version is '${Version}'"
+                        echo "GroupID is '${GroupId}'"
+                        echo "Name is '${Name}'"
+                    }
+                }
+
+        // Stage 5 : Deploying the build artifact to Apache Tomcat
+        stage ('Deploy to Tomcat'){
+            steps {
+                echo "Deploying ...."
+                sshPublisher(publishers: 
+                [sshPublisherDesc(
+                    configName: 'Ansible_Controller', 
+                    transfers: [
+                        sshTransfer(
+                                cleanRemote:false,
+                                execCommand: 'ansible-playbook /opt/playbooks/downloadanddeploy_as_tomcat_user.yaml -i /opt/playbooks/hosts',
+                                execTimeout: 120000
+                        )
+                    ], 
+                    usePromotionTimestamp: false, 
+                    useWorkspaceInPromotion: false, 
+                    verbose: false)
+                    ])
+            
+            }
+        }
+
+    // Stage 6 : Deploying the build artifact to Docker
+        stage ('Deploy to Docker'){
+            steps {
+                echo "Deploying ...."
+                sshPublisher(publishers: 
+                [sshPublisherDesc(
+                    configName: 'Ansible_Controller', 
+                    transfers: [
+                        sshTransfer(
+                                cleanRemote:false,
+                                execCommand: 'ansible-playbook /opt/playbooks/downloadanddeploy_docker.yaml -i /opt/playbooks/hosts',
+                                execTimeout: 120000
+                        )
+                    ], 
+                    usePromotionTimestamp: false, 
+                    useWorkspaceInPromotion: false, 
+                    verbose: false)
+                    ])
+            
+            }
+        }
+
+
+
+
+    }
+
+}
